@@ -1,11 +1,11 @@
-# Device: Enri.nl P1 Shield v2
-# Config is based on https://github.com/aiolos/ESPHome-config/blob/main/p1-with-gas.yaml
+# Device: Enri.nl P1 & Water Shield - V1
+# Config is based on https://github.com/aiolos/ESPHome-config/blob/main/p1-with-water.yaml
 #
 
 packages:
   <<: !include_dir_named ../components/common
   wifi: !include ../components/hardware/wifi.yaml
-  board: !include ../boards/esp_01.yaml
+  board: !include ../boards/d1_mini.yaml
 
 substitutions:
   dsmr_output_port: "8088"
