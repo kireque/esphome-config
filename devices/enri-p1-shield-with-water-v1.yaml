@@ -8,7 +8,7 @@ packages:
   board: !include ../boards/d1_mini.yaml
 
 substitutions:
-  dsmr_output_port: "8088"
+  dsmr_output_port: "2323"
 
 external_components:
   - source: github://oxan/esphome-stream-server
