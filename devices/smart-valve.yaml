@@ -1,0 +1,34 @@
+---
+# Device: Tuya smart valve
+#
+
+packages:
+<<: !include_dir_named ../components/common
+wifi: !include ../components/hardware/wifi.yaml
+board: !include ../boards/esp_12e.yaml
+
+switch:
+  - platform: gpio
+    name: "${friendly_name}_relay"
+    pin: GPIO13
+    id: switch_relay
+    restore_mode: RESTORE_DEFAULT_OFF
+    icon: mdi:water-pump
+    on_turn_on:
+      - logger.log: "Valve Turned On!"
+    on_turn_off:
+      - logger.log: "Valve Turned Off!"
+  # Switch to restart the valve.
+  - platform: restart
+    name: "${friendly_name}_restart"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO12
+      inverted: true
+    name:  "${friendly_name}_button"
+    on_press:
+      - switch.turn_on: switch_relay
+      - delay : 30min
+      - switch.turn_off: switch_relay
