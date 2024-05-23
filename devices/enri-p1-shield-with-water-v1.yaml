@@ -23,3 +23,57 @@ stream_server:
   id: ss
   uart_id: uart_bus
   port: ${dsmr_output_port}
+
+switch:
+  # Switch to turn on/off the chime.
+  - platform: gpio
+    id: relay
+    inverted: false
+    name: ${friendly_name}_chime
+    pin: D1
+
+  # Switch to turn on/off chime when
+  # doorbell button is pushed.
+  #
+  # It creates a "virtual" switch based
+  # on a global variable.
+  - platform: template
+    name: ${friendly_name}_chime_active
+    id: chime_active
+    restore_mode: 'ALWAYS_OFF'
+    turn_on_action:
+      - globals.set:
+          id: chime
+          value: 'true'
+    turn_off_action:
+      - globals.set:
+          id: chime
+          value: 'false'
+    lambda: |-
+      return id(chime);
+
+# Binary sensor representing the
+# Doorbell button push.
+binary_sensor:
+  - platform: gpio
+    id: button
+    name: ${friendly_name}_button
+    pin:
+      # Connected to GPIO on the ESP-01S.
+      number: D7
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      # Small filter, to debounce the button press.
+      - delayed_on: 25ms
+      - delayed_off: 5000ms
+    on_press:
+      # Only turn on the chime when it is active.
+      then:
+        if:
+          condition:
+            - switch.is_on: chime_active
+          then:
+            - switch.turn_on: relay
+            - delay: 250ms
+            - switch.turn_off: relay
