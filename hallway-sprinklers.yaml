@@ -1,9 +1,9 @@
 ---
-  substitutions:
-    system_name: hallway-sprinklers
-    host_name: hallway-sprinklers-esp.home.econline.nl
-    friendly_name: Hallway - Sprinklers
-    device_description: Valve to control sprinklers
+substitutions:
+  system_name: hallway-sprinklers
+  host_name: hallway-sprinklers-esp.home.econline.nl
+  friendly_name: Hallway - Sprinklers
+  device_description: Valve to control sprinklers
 
-  packages:
-    device: !include devices/smart-valve.yaml
+packages:
+  device: !include devices/tuya-smart-valve.yaml
