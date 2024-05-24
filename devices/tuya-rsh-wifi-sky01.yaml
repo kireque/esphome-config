@@ -103,7 +103,7 @@ binary_sensor:
       mode: INPUT_PULLDOWN_16
       inverted: true
     name: ${friendly_name} Button
-    id: ${node_name}_button
+    id: ${friendly_name}_button
     on_multi_click:
     # single click
     - timing:
@@ -140,7 +140,7 @@ binary_sensor:
           - delay: 0.1s
           - while:
               condition:
-                binary_sensor.is_on: ${node_name}_button
+                binary_sensor.is_on: ${friendly_name}_button
               then:
                 - light.dim_relative:
                     id: rgb_light
@@ -152,7 +152,7 @@ binary_sensor:
           - delay: 0.1s
           - while:
               condition:
-                binary_sensor.is_on: ${node_name}_button
+                binary_sensor.is_on: ${friendly_name}_button
               then:
                 - light.dim_relative:
                     id: rgb_light
