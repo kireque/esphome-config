@@ -13,12 +13,6 @@ globals:
     restore_value: no
     initial_value: 'false'
 
-# Exposed switches.
-switch:
-  # Switch to restart the doorbell.
-  - platform: restart
-    name: ${friendly_name} Restart
-
 # exposed lights.
 light:
   - platform: rgb
