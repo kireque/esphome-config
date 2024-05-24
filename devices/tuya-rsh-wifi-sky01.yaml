@@ -7,6 +7,12 @@ packages:
   wifi: !include ../components/hardware/wifi.yaml
   board: !include ../boards/esp_12e.yaml
 
+globals:
+  - id: dim
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
 # Exposed switches.
 switch:
   # Switch to restart the doorbell.
