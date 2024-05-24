@@ -1,0 +1,9 @@
+---
+  substitutions:
+    system_name: bedroom-eva-nebula
+    host_name: bedroom-eva-nebula-esp.home.econline.nl
+    friendly_name: Bedroom Eva - Nebula
+    device_description: RSH Tuya Smart Star Projector
+
+  packages:
+    device: !include devices/tuya-rsh-wifi-sky01.yaml
