@@ -115,7 +115,7 @@ binary_sensor:
             brightness: 30%
         - light.turn_on: 
             id: laser
-            brightness: 65%
+            brightness: 70%
         - delay : 1h
         - light.turn_off: 
             id: rgb_light
