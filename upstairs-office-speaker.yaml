@@ -1,6 +1,6 @@
 ---
   substitutions:
-    system_name: upstairs_office_speaker
+    system_name: upstairs-office-speaker
     host_name: upstairs-office-speaker-esp.home.econline.nl
     friendly_name: Upstairs Office - Speaker
     device_description: M5Stack Atom Speaker Kit that plays doorbell chime in the upstairs office
