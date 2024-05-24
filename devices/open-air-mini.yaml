@@ -1,0 +1,144 @@
+---
+# Device: Open Air mini board
+# Config based on: https://github.com/Flamingo-tech/Open-AIR/blob/main/Open%20AIR%20Mini/Software/open-air-mini.yaml
+#
+
+packages:
+<<: !include_dir_named ../components/common
+wifi: !include ../components/hardware/wifi.yaml
+board: !include ../boards/esp32dev.yaml
+
+globals:
+  # Disconnected Mode Max Fan Speed, linked to Disconnected Hum Level Max Speed
+  - id: disconnected_max_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "100"
+  # Disconnected Mode Medium Fan Speed, linked to Disconnected Hum Level Medium Speed
+  - id: disconnected_medium_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "60"
+  # Disconnected Mode Default Fan Speed, for humidities lower than Disconnected Hum Level Medium Speed
+  # or if NOT using a humidity sensor. Without sensor this speed will be maintained untill a connection
+  # to Home Assistant has been restored and your automations can take over.
+  - id: disconnected_default_fan_speed
+    type: int
+    restore_value: no
+    initial_value: "25"
+  # Disconnected Mode Max Fan Speed Threshold
+  - id: disconnected_hum_level_max_speed
+    type: int
+    restore_value: no
+    initial_value: "75"
+  # Disconnected Mode Medium Fan Speed Threshold
+  - id: disconnected_hum_level_medium_speed
+    type: int
+    restore_value: no
+    initial_value: "55"
+
+# # From V1.4.0 The Sensor pins on the Open AIR Mini are swapped. Correct example is below:
+# uart:
+# #UART For Sensor 2
+#  - rx_pin: GPIO13
+#    tx_pin: GPIO12
+#    baud_rate: 9600
+#    id: uart_sensor_2
+# #UART For Sensor 1
+#  - rx_pin: GPIO25
+#    tx_pin: GPIO26
+#    baud_rate: 9600
+#    id: uart_sensor_1
+
+# i2c:
+# #I2C For Sensor 2
+# - id: i2c_sensor_2
+#   sda: GPIO19
+#   scl: GPIO18
+#   scan: false
+#   frequency: 400kHz
+# #I2C For Sensor 1
+# - id: i2c_sensor_1
+#   sda: GPIO16
+#   scl: GPIO4
+#   scan: false
+#   frequency: 400kHz
+
+#For version <1.4.0 use: (remove the # and remove above sensor pins)
+uart:
+  # UART For Sensor 2
+  - rx_pin: GPIO13
+    tx_pin: GPIO12
+    baud_rate: 9600
+    id: uart_sensor_2
+  # UART For Sensor 1
+  - rx_pin: GPIO25
+    tx_pin: GPIO26
+    baud_rate: 9600
+    id: uart_sensor_1
+
+i2c:
+  # I2C For Sensor 2
+  - id: i2c_sensor_2
+    sda: GPIO19
+    scl: GPIO18
+    scan: false
+    frequency: 400kHz
+  # I2C For Sensor 1
+  - id: i2c_sensor_1
+    sda: GPIO16
+    scl: GPIO4
+    scan: false
+    frequency: 400kHz
+
+# Status led
+status_led:
+  pin:
+    number: GPIO33
+
+#PWM output for controlling the motor.
+output:
+  - platform: ledc
+    pin: GPIO15
+    inverted: true
+    id: open_air_mini
+
+fan:
+  - platform: speed
+    output: open_air_mini
+    name: "Open AIR Mini"
+    id: fan_motor
+
+sensor:
+  - platform: pulse_counter
+    pin: GPIO14
+    unit_of_measurement: "RPM"
+    name: "AIR Mini RPM"
+
+script:
+  # Below includes for disconnected mode are mutually exclusive. Only use one at a time!
+  # !include disconnected-mode-without-humidity.yaml
+  # !include disconnected-mode-with-humidity.yaml
+  - id: disconnected_mode
+  mode: single
+  then:
+    - logger.log: "Disconnected Mode Triggered"
+    - fan.turn_on: 
+        id: fan_motor
+        speed: !lambda |-
+          return id(disconnected_default_fan_speed);
+
+interval:
+  - interval: 30s
+    then:
+      - logger.log: "API Connectivity Check for Disconnected Mode"
+      - if:
+          condition:
+            not:
+              api.connected:
+          then:
+            - logger.log: "API disconnected"
+            - script.execute: disconnected_mode
+          else:
+            - logger.log: "API connected"
+            - script.stop: disconnected_mode
