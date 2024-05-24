@@ -1,9 +1,9 @@
 ---
 substitutions:
-system_name: laundry-room-open-air-mini
-host_name: laundry-room-open-air-mini-esp.home.econline.nl
-friendly_name: Laundry Room - Open Air mini
-device_description: Open AIR is an open-source solution for home ventilation and management through Home Assistant integration.
+  system_name: laundry-room-open-air-mini
+  host_name: laundry-room-open-air-mini-esp.home.econline.nl
+  friendly_name: Laundry Room - Open Air mini
+  device_description: Open AIR is an open-source solution for home ventilation and management through Home Assistant integration.
 
 packages:
-device: !include devices/open-air-mini.yaml
+  device: !include devices/open-air-mini.yaml
