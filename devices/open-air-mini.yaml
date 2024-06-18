@@ -116,7 +116,7 @@ sensor:
     name: "AIR Mini RPM"
 
   - platform: senseair
-    uart_id: uart_sensor_1 # if u use sensor 2 then use uart_sensor_2
+    uart_id: uart_sensor_2 # if u use sensor 2 then use uart_sensor_2
     co2:
       name: "Open Duco CO2 Value"
     update_interval: 60s
