@@ -115,6 +115,12 @@ sensor:
     unit_of_measurement: "RPM"
     name: "AIR Mini RPM"
 
+  - platform: senseair
+    uart_id: uart_sensor_1 # if u use sensor 2 then use uart_sensor_2
+    co2:
+      name: "Open Duco CO2 Value"
+    update_interval: 60s
+
 script:
   # Below includes for disconnected mode are mutually exclusive. Only use one at a time!
   # !include disconnected-mode-without-humidity.yaml
