@@ -16,7 +16,7 @@ globals:
 # exposed lights.
 light:
   - platform: rgb
-    name: ${friendly_name} Light
+    name: Light
     icon: mdi:star-shooting
     id: rgb_light
     red: red
@@ -41,7 +41,7 @@ light:
         - light.turn_off: btn_led
 
   - platform: monochromatic
-    name: ${friendly_name} Laser
+    name: Laser
     icon: mdi:laser-pointer
     id: laser
     output: laser_pwm
@@ -49,7 +49,7 @@ light:
     default_transition_length: 3s
 
   - platform: monochromatic
-    name: ${friendly_name} Button Led
+    name: Button Led
     icon: mdi:led-outline
     entity_category: diagnostic
     id: btn_led
@@ -58,7 +58,7 @@ light:
 
 fan:
   platform: speed
-  name: ${friendly_name} Motor
+  name: Motor
   icon: mdi:play-speed
   id: motor
   output: motor_pwm
@@ -102,7 +102,7 @@ binary_sensor:
       number: GPIO16
       mode: INPUT_PULLDOWN_16
       inverted: true
-    name: ${friendly_name} Button
+    name: Button
     id: button_1
     on_multi_click:
     # single click

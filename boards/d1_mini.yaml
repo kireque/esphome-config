@@ -3,7 +3,23 @@
   #
   # https://docs.platformio.org/en/latest/boards/espressif8266/d1_mini.html#id1
   #
-  esphome:
-    <<: !include .esphome.yaml
-    platform: ESP8266
-    board: d1_mini
+esphome:
+  <<: !include .esphome.yaml
+
+esp8266:
+  board: d1_mini_pro
+  framework:
+    version: recommended
+
+####################################################################################################################################
+#
+# Error DMSR reader:
+#
+# 10:17:54	[W]	[http_request.arduino:065]	
+# Using HTTP on Arduino version >= 3.1 is **very** slow. Consider setting framework version to 3.0.2 in your YAML, or use HTTPS
+# 10:17:54	[W]	[component:237]	
+# Component interval took a long time for an operation (113 ms).
+# 10:17:54	[W]	[component:238]	
+# Components should block for at most 30 ms.
+#
+####################################################################################################################################

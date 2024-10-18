@@ -9,7 +9,7 @@ packages:
 
 switch:
   - platform: gpio
-    name: "${friendly_name}_relay"
+    name: "relay"
     pin: GPIO13
     id: switch_relay
     restore_mode: RESTORE_DEFAULT_OFF
@@ -20,14 +20,14 @@ switch:
       - logger.log: "Valve Turned Off!"
   # Switch to restart the valve.
   - platform: restart
-    name: "${friendly_name}_restart"
+    name: "restart"
 
 binary_sensor:
   - platform: gpio
     pin:
       number: GPIO12
       inverted: true
-    name:  "${friendly_name}_button"
+    name:  "button"
     on_press:
       - switch.turn_on: switch_relay
       - delay : 30min

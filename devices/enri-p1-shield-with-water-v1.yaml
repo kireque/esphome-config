@@ -7,22 +7,168 @@ packages:
   wifi: !include ../components/hardware/wifi.yaml
   board: !include ../boards/d1_mini.yaml
 
-substitutions:
-  dsmr_output_port: "2323"
+# substitutions:
+#   dsmr_output_port: "2323"
 
-external_components:
-  - source: github://oxan/esphome-stream-server
+# external_components:
+#   - source: github://oxan/esphome-stream-server
 
 uart:
-  - id: uart_bus
+  - id: uart_dsmr
     rx_pin: RX
     baud_rate: 115200
-    rx_buffer_size: 1024
+    rx_buffer_size: 1700
 
-stream_server:
-  id: ss
-  uart_id: uart_bus
-  port: ${dsmr_output_port}
+# stream_server:
+#   id: ss
+#   uart_id: uart_bus
+#   port: ${dsmr_output_port}
+
+dsmr:
+  uart_id: uart_dsmr
+  id: dsmr_instance
+  max_telegram_length: 1700
+  gas_mbus_id: 2
+
+# Sensors
+sensor:
+  - platform: dsmr
+    energy_delivered_tariff1:
+      id: dsmr_electricity_delivered_1
+      name: "Energy Consumed Tariff 1"
+      state_class: total_increasing
+    energy_returned_tariff1:
+      id: dsmr_electricity_returned_1
+      name: "Energy Produced Tariff 1"
+      state_class: total_increasing
+    energy_delivered_tariff2:
+      id: dsmr_electricity_delivered_2
+      name: "Energy Consumed Tariff 2"
+      state_class: total_increasing
+    energy_returned_tariff2:
+      id: dsmr_electricity_returned_2
+      name: "Energy Produced Tariff 2"
+      state_class: total_increasing
+    power_delivered:
+      accuracy_decimals: 3
+      id: dsmr_electricity_currently_delivered
+      name: "Power Consumed"
+    power_returned:
+      accuracy_decimals: 3
+      id: dsmr_electricity_currently_returned
+      name: "Power Produced"
+    voltage_l1:
+      id: dsmr_phase_voltage_l1
+      name: "Voltage Phase 1"
+    voltage_l2:
+      id: dsmr_phase_voltage_l2
+      name: "Voltage Phase 2"
+    voltage_l3:
+      id: dsmr_phase_voltage_l3
+      name: "Voltage Phase 3"
+    current_l1:
+      id: dsmr_phase_power_current_l1
+      name: "Current Phase 1"
+    current_l2:
+      id: dsmr_phase_power_current_l2
+      name: "Current Phase 2"
+    current_l3:
+      id: dsmr_phase_power_current_l3
+      name: "Current Phase 3"
+    power_delivered_l1:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_delivered_l1
+      name: "Power Consumed Phase 1"
+    power_delivered_l2:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_delivered_l2
+      name: "Power Consumed Phase 2"
+    power_delivered_l3:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_delivered_l3
+      name: "Power Consumed Phase 3"
+    power_returned_l1:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_returned_l1
+      name: "Power Produced Phase 1"
+    power_returned_l2:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_returned_l2
+      name: "Power Produced Phase 2"
+    power_returned_l3:
+      accuracy_decimals: 3
+      id: dsmr_phase_currently_returned_l3
+      name: "Power Produced Phase 3"
+    gas_delivered:
+      id: dsmr_extra_device_delivered
+      name: "Gas Consumed"
+      state_class: total_increasing
+  - platform: template
+    id: dsmr_electricity_currently_delivered_watt
+    name: Power Consumed (W)
+    update_interval: 1s
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    lambda: |-
+      if (id(dsmr_electricity_currently_delivered).state) {
+        return (id(dsmr_electricity_currently_delivered).state * 1000);
+      } else {
+        return 0;
+      }
+  - platform: template
+    id: dsmr_electricity_currently_returned_watt
+    name: Power Produced (W)
+    update_interval: 1s
+    accuracy_decimals: 0
+    unit_of_measurement: W
+    device_class: power
+    lambda: |-
+      if (id(dsmr_electricity_currently_returned).state) {
+        return (id(dsmr_electricity_currently_returned).state * 1000);
+      } else {
+        return 0;
+      }
+
+text_sensor:
+  - platform: dsmr
+    identification:
+      name: Identification
+    p1_version:
+      name: Version
+    timestamp:
+      id: dsmr_timestamp
+      internal: true
+  - platform: template
+    id: dsmr_timestamp_formatted
+    internal: true
+    update_interval: 2s
+    lambda: |-
+      esphome::optional<std::string> result;
+      std::string input = id(dsmr_timestamp).state;
+      if (!input.empty()) {
+        std::string year = "20" + input.substr(0, 2);
+        std::string month = input.substr(2, 2);
+        std::string day = input.substr(4, 2);
+        std::string hour = input.substr(6, 2);
+        std::string minute = input.substr(8, 2);
+        std::string second = input.substr(10, 2);
+        std::string indicator = input.substr(12, 1);
+        std::string timezone = "+00:00";
+        if (indicator == "W") {
+          timezone = "+01:00";
+        } else if (indicator == "S") {
+          timezone = "+02:00";
+        }
+        result = year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second + timezone;
+      }
+      return result;
+
+#########################################
+#
+# Doorbell config
+#
+#########################################
 
 globals:
   - id: chime
@@ -35,7 +181,7 @@ switch:
   - platform: gpio
     id: relay
     inverted: false
-    name: ${friendly_name}_chime
+    name: chime
     pin: D1
 
   # Switch to turn on/off chime when
@@ -44,9 +190,9 @@ switch:
   # It creates a "virtual" switch based
   # on a global variable.
   - platform: template
-    name: ${friendly_name}_chime_active
+    name: chime_active
     id: chime_active
-    restore_mode: 'ALWAYS_OFF'
+    restore_mode: 'ALWAYS_ON'
     turn_on_action:
       - globals.set:
           id: chime
@@ -63,7 +209,7 @@ switch:
 binary_sensor:
   - platform: gpio
     id: button_doorbell
-    name: ${friendly_name}_button
+    name: button
     pin:
       # Connected to GPIO on the ESP-01S.
       number: D7

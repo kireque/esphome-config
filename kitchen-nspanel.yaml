@@ -1,10 +1,9 @@
 ---
   substitutions:
     device_name: kitchen_nspanel
-    host_name: kitchen-nspanel.home.econline.nl
     friendly_name: Kitchen - NSPanel
     device_description: Smart touchscreen for home automation, integrates with Home Assistant.
-
+  
   packages:
     device: !include devices/sonoff_nspanel.yaml
 
