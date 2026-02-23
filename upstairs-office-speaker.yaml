@@ -6,4 +6,4 @@
     device_description: M5Stack Atom Speaker Kit that plays doorbell chime in the upstairs office
 
   packages:
-    device: !include devices/m5stack-atom-doorbell-chime.yaml
+    device: !include devices/m5stack-atom-doorbell-chime.yamltest
