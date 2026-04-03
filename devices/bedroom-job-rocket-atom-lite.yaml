@@ -3,7 +3,7 @@
 # Location: Bedroom Job
 # Description: WS2812 RGB LED strip (8 LEDs) with button control for color selection
 # LED GPIO: 26
-# Button: Built-in button on GPIO 39
+# Button: GPIO25 (external button, pulled up, active low)
 
 packages:
   <<: !include_dir_named ../components/common
@@ -11,11 +11,35 @@ packages:
   board: !include ../boards/m5stack-atom.yaml
 
 globals:
-  # Current color mode: 0=off, 1=red, 2=green, 3=orange
   - id: color_mode
     type: int
     restore_value: yes
-    initial_value: "0"
+    initial_value: "1"
+
+web_server:
+  port: 80
+
+sensor:
+  - platform: homeassistant
+    id: sleep_hour
+    name: "Slaaptijd uur"
+    entity_id: input_datetime.job_rocket_sleep
+    attribute: hour
+  - platform: homeassistant
+    id: sleep_minute
+    name: "Slaaptijd minuut"
+    entity_id: input_datetime.job_rocket_sleep
+    attribute: minute
+  - platform: homeassistant
+    id: wakeup_hour
+    name: "Opstaan uur"
+    entity_id: input_datetime.job_rocket_wakeup
+    attribute: hour
+  - platform: homeassistant
+    id: wakeup_minute
+    name: "Opstaan minuut"
+    entity_id: input_datetime.job_rocket_wakeup
+    attribute: minute
 
 light:
   - platform: neopixelbus
@@ -34,6 +58,73 @@ light:
           transition_length: 1s
           update_interval: 1s
 
+script:
+  - id: apply_color
+    then:
+      - if:
+          condition:
+            lambda: 'return id(color_mode) == 1;'
+          then:
+            - light.turn_on:
+                id: led_strip
+                brightness: 30%
+                red: 100%
+                green: 0%
+                blue: 0%
+      - if:
+          condition:
+            lambda: 'return id(color_mode) == 2;'
+          then:
+            - light.turn_on:
+                id: led_strip
+                brightness: 30%
+                red: 0%
+                green: 100%
+                blue: 0%
+      - if:
+          condition:
+            lambda: 'return id(color_mode) == 3;'
+          then:
+            - light.turn_on:
+                id: led_strip
+                brightness: 30%
+                red: 100%
+                green: 65%
+                blue: 0%
+
+  - id: auto_off
+    mode: restart
+    then:
+      - delay: 1h
+      - light.turn_off: led_strip
+
+interval:
+  - interval: 60s
+    then:
+      - lambda: |-
+          auto now = id(time_sntp).now();
+          if (!now.is_valid()) return;
+
+          int now_total = now.hour * 60 + now.minute;
+
+          int sleep_total = (int)id(sleep_hour).state * 60 + (int)id(sleep_minute).state;
+          int wakeup_total = (int)id(wakeup_hour).state * 60 + (int)id(wakeup_minute).state;
+          int wakeup_minus15 = wakeup_total - 15;
+
+          if (now_total == sleep_total) {
+            id(color_mode) = 1;
+            id(apply_color).execute();
+          }
+          else if (now_total == wakeup_minus15) {
+            id(color_mode) = 3;
+            id(apply_color).execute();
+          }
+          else if (now_total == wakeup_total) {
+            id(color_mode) = 2;
+            id(apply_color).execute();
+            id(auto_off).execute();
+          }
+
 binary_sensor:
   - platform: gpio
     pin:
@@ -41,10 +132,12 @@ binary_sensor:
       inverted: true
       mode:
         input: true
+        pullup: true
     name: "Button"
-    id: button-main
+    id: button_main
+    filters:
+      - delayed_on_off: 20ms
     on_multi_click:
-      # Single click - toggle on/off
       - timing:
           - ON for at most 500ms
           - OFF for at least 350ms
@@ -54,27 +147,9 @@ binary_sensor:
                 light.is_on: led_strip
               then:
                 - light.turn_off: led_strip
-                - lambda: |-
-                    id(color_mode) = 0;
+                - script.stop: auto_off
               else:
-                - if:
-                    condition:
-                      lambda: |-
-                        return id(color_mode) == 0;
-                    then:
-                      # Default to green if mode was off
-                      - lambda: |-
-                          id(color_mode) = 2;
-                      - light.turn_on:
-                          id: led_strip
-                          brightness: 100%
-                          red: 0%
-                          green: 100%
-                          blue: 0%
-                    else:
-                      # Restore previous color
-                      - light.turn_on: led_strip
-      # Double click - cycle through colors
+                - script.execute: apply_color
       - timing:
           - ON for at most 500ms
           - OFF for at most 350ms
@@ -82,38 +157,5 @@ binary_sensor:
           - OFF for at least 350ms
         then:
           - lambda: |-
-              // Cycle through colors: 1=red, 2=green, 3=orange, then back to 1
               id(color_mode) = (id(color_mode) % 3) + 1;
-          - if:
-              condition:
-                lambda: |-
-                  return id(color_mode) == 1;
-              then:
-                - light.turn_on:
-                    id: led_strip
-                    brightness: 100%
-                    red: 100%
-                    green: 0%
-                    blue: 0%
-          - if:
-              condition:
-                lambda: |-
-                  return id(color_mode) == 2;
-              then:
-                - light.turn_on:
-                    id: led_strip
-                    brightness: 100%
-                    red: 0%
-                    green: 100%
-                    blue: 0%
-          - if:
-              condition:
-                lambda: |-
-                  return id(color_mode) == 3;
-              then:
-                - light.turn_on:
-                    id: led_strip
-                    brightness: 100%
-                    red: 100%
-                    green: 65%
-                    blue: 0%
+          - script.execute: apply_color

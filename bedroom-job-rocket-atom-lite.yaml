@@ -1,7 +1,7 @@
 ---
 substitutions:
-  device_name: bedroom-job-rocket
   system_name: bedroom-job-rocket
+  host_name: bedroom-job-rocket.home.econline.nl
   device_description: "WS2812 job status LEDs - slaapkamer"
   friendly_name: "Bedroom Job Rocket"
   ap_ssid: "Job Rocket AP"
