@@ -1,0 +1,119 @@
+---
+# Device: M5Stack Atom Lite
+# Location: Bedroom Job
+# Description: WS2812 RGB LED strip (8 LEDs) with button control for color selection
+# LED GPIO: 26
+# Button: Built-in button on GPIO 39
+
+packages:
+  <<: !include_dir_named ../components/common
+  wifi: !include ../components/hardware/wifi.yaml
+  board: !include ../boards/m5stack-atom.yaml
+
+globals:
+  # Current color mode: 0=off, 1=red, 2=green, 3=orange
+  - id: color_mode
+    type: int
+    restore_value: yes
+    initial_value: "0"
+
+light:
+  - platform: neopixelbus
+    name: "LED Strip"
+    icon: mdi:led-strip-variant
+    id: led_strip
+    pin: GPIO26
+    num_leds: 8
+    variant: WS2812
+    type: GRB
+    default_transition_length: 500ms
+    restore_mode: RESTORE_DEFAULT_OFF
+    effects:
+      - random:
+          name: "Random Colors"
+          transition_length: 1s
+          update_interval: 1s
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO25
+      inverted: true
+      mode:
+        input: true
+    name: "Button"
+    id: button-main
+    on_multi_click:
+      # Single click - toggle on/off
+      - timing:
+          - ON for at most 500ms
+          - OFF for at least 350ms
+        then:
+          - if:
+              condition:
+                light.is_on: led_strip
+              then:
+                - light.turn_off: led_strip
+                - lambda: |-
+                    id(color_mode) = 0;
+              else:
+                - if:
+                    condition:
+                      lambda: |-
+                        return id(color_mode) == 0;
+                    then:
+                      # Default to green if mode was off
+                      - lambda: |-
+                          id(color_mode) = 2;
+                      - light.turn_on:
+                          id: led_strip
+                          brightness: 100%
+                          red: 0%
+                          green: 100%
+                          blue: 0%
+                    else:
+                      # Restore previous color
+                      - light.turn_on: led_strip
+      # Double click - cycle through colors
+      - timing:
+          - ON for at most 500ms
+          - OFF for at most 350ms
+          - ON for at most 500ms
+          - OFF for at least 350ms
+        then:
+          - lambda: |-
+              // Cycle through colors: 1=red, 2=green, 3=orange, then back to 1
+              id(color_mode) = (id(color_mode) % 3) + 1;
+          - if:
+              condition:
+                lambda: |-
+                  return id(color_mode) == 1;
+              then:
+                - light.turn_on:
+                    id: led_strip
+                    brightness: 100%
+                    red: 100%
+                    green: 0%
+                    blue: 0%
+          - if:
+              condition:
+                lambda: |-
+                  return id(color_mode) == 2;
+              then:
+                - light.turn_on:
+                    id: led_strip
+                    brightness: 100%
+                    red: 0%
+                    green: 100%
+                    blue: 0%
+          - if:
+              condition:
+                lambda: |-
+                  return id(color_mode) == 3;
+              then:
+                - light.turn_on:
+                    id: led_strip
+                    brightness: 100%
+                    red: 100%
+                    green: 65%
+                    blue: 0%
