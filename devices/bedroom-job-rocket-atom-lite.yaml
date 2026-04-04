@@ -11,35 +11,47 @@ packages:
   board: !include ../boards/m5stack-atom.yaml
 
 globals:
-  - id: color_mode
+  - id: alarm_enabled_state
+    type: bool
+    restore_value: no
+    initial_value: "true"
+  - id: suppress_active_sync_callbacks
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: last_sleep_key
     type: int
     restore_value: yes
-    initial_value: "1"
+    initial_value: "-1"
+  - id: last_prewakeup_key
+    type: int
+    restore_value: yes
+    initial_value: "-1"
+  - id: last_wakeup_key
+    type: int
+    restore_value: yes
+    initial_value: "-1"
+  - id: last_phase_text
+    type: std::string
+    restore_value: no
+    initial_value: '"Not yet run"'
+  - id: next_phase_text
+    type: std::string
+    restore_value: no
+    initial_value: '"Unknown"'
+
+esphome:
+  on_boot:
+    priority: -10
+    then:
+      - lambda: |-
+          id(alarm_enabled_state) = true;
+          ESP_LOGI("alarm", "Alarm enabled forced ON at boot");
+      - script.execute: catch_up_after_boot
+      - script.execute: update_next_phase
 
 web_server:
   port: 80
-
-sensor:
-  - platform: homeassistant
-    id: sleep_hour
-    name: "Slaaptijd uur"
-    entity_id: input_datetime.job_rocket_sleep
-    attribute: hour
-  - platform: homeassistant
-    id: sleep_minute
-    name: "Slaaptijd minuut"
-    entity_id: input_datetime.job_rocket_sleep
-    attribute: minute
-  - platform: homeassistant
-    id: wakeup_hour
-    name: "Opstaan uur"
-    entity_id: input_datetime.job_rocket_wakeup
-    attribute: hour
-  - platform: homeassistant
-    id: wakeup_minute
-    name: "Opstaan minuut"
-    entity_id: input_datetime.job_rocket_wakeup
-    attribute: minute
 
 light:
   - platform: neopixelbus
@@ -58,72 +70,475 @@ light:
           transition_length: 1s
           update_interval: 1s
 
+number:
+  - platform: template
+    name: "Sleep brightness"
+    id: sleep_brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    restore_value: true
+    optimistic: true
+    initial_value: 30
+
+  - platform: template
+    name: "Pre-wake brightness"
+    id: prewakeup_brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    restore_value: true
+    optimistic: true
+    initial_value: 30
+
+  - platform: template
+    name: "Wake-up brightness"
+    id: wakeup_brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    restore_value: true
+    optimistic: true
+    initial_value: 30
+
+  - platform: template
+    name: "Active brightness"
+    id: active_brightness
+    min_value: 1
+    max_value: 100
+    step: 1
+    restore_value: true
+    optimistic: true
+    initial_value: 30
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                return id(led_strip).current_values.is_on() && !id(suppress_active_sync_callbacks);
+            then:
+              - script.execute: apply_active_profile
+
+datetime:
+  - platform: template
+    id: sleep_time
+    name: "Sleep time"
+    type: time
+    optimistic: true
+    restore_value: true
+    initial_value: "19:30:00"
+
+  - platform: template
+    id: wakeup_time
+    name: "Wake-up time"
+    type: time
+    optimistic: true
+    restore_value: true
+    initial_value: "07:15:00"
+
+select:
+  - platform: template
+    name: "Sleep color"
+    id: sleep_color
+    optimistic: true
+    restore_value: true
+    options: &color_options
+      - Red
+      - Green
+      - Orange
+      - Yellow
+      - Blue
+      - Purple
+      - White
+    initial_option: Red
+
+  - platform: template
+    name: "Pre-wake offset"
+    id: prewakeup_offset
+    optimistic: true
+    restore_value: true
+    options:
+      - 5 minutes
+      - 10 minutes
+      - 15 minutes
+      - 20 minutes
+      - 30 minutes
+      - 45 minutes
+      - 60 minutes
+    initial_option: 15 minutes
+
+  - platform: template
+    name: "Pre-wake color"
+    id: prewakeup_color
+    optimistic: true
+    restore_value: true
+    options: *color_options
+    initial_option: Orange
+
+  - platform: template
+    name: "Wake-up color"
+    id: wakeup_color
+    optimistic: true
+    restore_value: true
+    options: *color_options
+    initial_option: Green
+
+  - platform: template
+    name: "Active color"
+    id: active_color
+    optimistic: true
+    restore_value: true
+    options: *color_options
+    initial_option: Green
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                return id(led_strip).current_values.is_on() && !id(suppress_active_sync_callbacks);
+            then:
+              - script.execute: apply_active_profile
+
+switch:
+  - platform: template
+    name: "Alarm enabled"
+    id: alarm_enabled
+    restore_mode: ALWAYS_ON
+    lambda: |-
+      return id(alarm_enabled_state);
+    turn_on_action:
+      - lambda: |-
+          id(alarm_enabled_state) = true;
+      - script.execute: update_next_phase
+    turn_off_action:
+      - lambda: |-
+          id(alarm_enabled_state) = false;
+          id(next_phase_text) = "Disabled";
+    optimistic: true
+
+text_sensor:
+  - platform: template
+    name: "Alarm last phase"
+    id: last_phase_sensor
+    lambda: |-
+      return id(last_phase_text);
+    update_interval: 10s
+
+  - platform: template
+    name: "Alarm next phase"
+    id: next_phase_sensor
+    lambda: |-
+      return id(next_phase_text);
+    update_interval: 10s
+
+button:
+  - platform: template
+    name: "Test sleep phase"
+    on_press:
+      - script.execute: apply_sleep_profile
+
+  - platform: template
+    name: "Test pre-wake phase"
+    on_press:
+      - script.execute: apply_prewakeup_profile
+
+  - platform: template
+    name: "Test wake-up phase"
+    on_press:
+      - script.execute: apply_wakeup_profile
+
+  - platform: template
+    name: "Test wake-up phase + auto-off"
+    on_press:
+      - script.execute: run_wakeup_phase_and_auto_off
+
 script:
-  - id: apply_color
+  - id: catch_up_after_boot
     then:
-      - if:
-          condition:
-            lambda: 'return id(color_mode) == 1;'
-          then:
-            - light.turn_on:
-                id: led_strip
-                brightness: 30%
-                red: 100%
-                green: 0%
-                blue: 0%
-      - if:
-          condition:
-            lambda: 'return id(color_mode) == 2;'
-          then:
-            - light.turn_on:
-                id: led_strip
-                brightness: 30%
-                red: 0%
-                green: 100%
-                blue: 0%
-      - if:
-          condition:
-            lambda: 'return id(color_mode) == 3;'
-          then:
-            - light.turn_on:
-                id: led_strip
-                brightness: 30%
-                red: 100%
-                green: 65%
-                blue: 0%
+      - lambda: |-
+          if (!id(alarm_enabled_state)) {
+            return;
+          }
+
+          auto now = id(time_sntp).now();
+          if (!now.is_valid()) {
+            return;
+          }
+
+          // If a phase was missed shortly before reboot, run it once after boot.
+          const int grace_minutes = 15;
+          const int now_total = now.hour * 60 + now.minute;
+
+          auto minutes_since = [&](int target_total) {
+            int delta = now_total - target_total;
+            if (delta < 0)
+              delta += 24 * 60;
+            return delta;
+          };
+
+          const int sleep_total = id(sleep_time).hour * 60 + id(sleep_time).minute;
+          const int wake_total = id(wakeup_time).hour * 60 + id(wakeup_time).minute;
+          const std::string pre_option = std::string(id(prewakeup_offset).current_option());
+          int pre_offset = 15;
+          if (pre_option == "5 minutes") pre_offset = 5;
+          else if (pre_option == "10 minutes") pre_offset = 10;
+          else if (pre_option == "20 minutes") pre_offset = 20;
+          else if (pre_option == "30 minutes") pre_offset = 30;
+          else if (pre_option == "45 minutes") pre_offset = 45;
+          else if (pre_option == "60 minutes") pre_offset = 60;
+          const int pre_total = (wake_total - pre_offset + (24 * 60)) % (24 * 60);
+
+          const int sleep_trigger_key = now.year * 100000 + now.day_of_year * 1440 + sleep_total;
+          const int pre_trigger_key = now.year * 100000 + now.day_of_year * 1440 + pre_total;
+          const int wake_trigger_key = now.year * 100000 + now.day_of_year * 1440 + wake_total;
+
+          const int sleep_delta = minutes_since(sleep_total);
+          const int pre_delta = minutes_since(pre_total);
+          const int wake_delta = minutes_since(wake_total);
+
+          if (id(last_wakeup_key) != wake_trigger_key && wake_delta <= grace_minutes) {
+            id(last_wakeup_key) = wake_trigger_key;
+            id(last_phase_text) = "Wake up";
+            id(run_wakeup_phase_and_auto_off).execute();
+            return;
+          }
+
+          if (id(last_prewakeup_key) != pre_trigger_key && pre_delta <= grace_minutes) {
+            id(last_prewakeup_key) = pre_trigger_key;
+            id(last_phase_text) = "Pre-wake";
+            id(apply_prewakeup_profile).execute();
+            return;
+          }
+
+          if (id(last_sleep_key) != sleep_trigger_key && sleep_delta <= grace_minutes) {
+            id(last_sleep_key) = sleep_trigger_key;
+            id(last_phase_text) = "Sleep";
+            id(apply_sleep_profile).execute();
+          }
+
+  - id: update_next_phase
+    then:
+      - lambda: |-
+          if (!id(alarm_enabled_state)) {
+            id(next_phase_text) = "Disabled";
+            return;
+          }
+
+          auto now = id(time_sntp).now();
+          if (!now.is_valid()) {
+            id(next_phase_text) = "Waiting for time sync";
+            return;
+          }
+
+          const int now_min = now.hour * 60 + now.minute;
+          const int sleep_min = id(sleep_time).hour * 60 + id(sleep_time).minute;
+          const int wake_min = id(wakeup_time).hour * 60 + id(wakeup_time).minute;
+          const std::string pre_option = std::string(id(prewakeup_offset).current_option());
+          int pre_offset = 15;
+          if (pre_option == "5 minutes") pre_offset = 5;
+          else if (pre_option == "10 minutes") pre_offset = 10;
+          else if (pre_option == "20 minutes") pre_offset = 20;
+          else if (pre_option == "30 minutes") pre_offset = 30;
+          else if (pre_option == "45 minutes") pre_offset = 45;
+          else if (pre_option == "60 minutes") pre_offset = 60;
+          const int pre_min = (wake_min - pre_offset + (24 * 60)) % (24 * 60);
+
+          int best_delta = 24 * 60 + 1;
+          const char *best_name = "Unknown";
+          int best_hour = 0;
+          int best_minute = 0;
+
+          auto eval = [&](int target_min, const char *name, int hour, int minute) {
+            int delta = target_min - now_min;
+            if (delta <= 0)
+              delta += 24 * 60;
+            if (delta < best_delta) {
+              best_delta = delta;
+              best_name = name;
+              best_hour = hour;
+              best_minute = minute;
+            }
+          };
+
+          eval(sleep_min, "Sleep", id(sleep_time).hour, id(sleep_time).minute);
+          eval(pre_min, "Pre-wake", pre_min / 60, pre_min % 60);
+          eval(wake_min, "Wake up", id(wakeup_time).hour, id(wakeup_time).minute);
+
+          char buf[64];
+          snprintf(buf, sizeof(buf), "%s at %02d:%02d", best_name, best_hour, best_minute);
+          id(next_phase_text) = buf;
+
+  - id: apply_profile
+    parameters:
+      brightness_pct: float
+      color_name: string
+    then:
+      - lambda: |-
+          auto call = id(led_strip).turn_on();
+          call.set_brightness(brightness_pct / 100.0f);
+          if (color_name == "Red") {
+            call.set_rgb(1.0f, 0.0f, 0.0f);
+          } else if (color_name == "Green") {
+            call.set_rgb(0.0f, 1.0f, 0.0f);
+          } else if (color_name == "Orange") {
+            call.set_rgb(1.0f, 0.65f, 0.0f);
+          } else if (color_name == "Yellow") {
+            call.set_rgb(1.0f, 1.0f, 0.0f);
+          } else if (color_name == "Blue") {
+            call.set_rgb(0.0f, 0.0f, 1.0f);
+          } else if (color_name == "Purple") {
+            call.set_rgb(0.6f, 0.0f, 1.0f);
+          } else {
+            call.set_rgb(1.0f, 1.0f, 1.0f);
+          }
+          call.perform();
+
+  - id: apply_profile_and_sync_active
+    parameters:
+      phase_name: string
+      brightness_pct: float
+      color_name: string
+    then:
+      - lambda: |-
+          ESP_LOGI(
+            "alarm",
+            "Executing phase '%s' with color '%s' at %.0f%% brightness",
+            phase_name.c_str(),
+            color_name.c_str(),
+            brightness_pct
+          );
+      - lambda: |-
+          id(suppress_active_sync_callbacks) = true;
+      - number.set:
+          id: active_brightness
+          value: !lambda "return brightness_pct;"
+      - select.set:
+          id: active_color
+          option: !lambda "return color_name;"
+      - script.execute:
+          id: apply_profile
+          brightness_pct: !lambda "return brightness_pct;"
+          color_name: !lambda "return color_name;"
+      - lambda: |-
+          id(suppress_active_sync_callbacks) = false;
+
+  - id: apply_sleep_profile
+    then:
+      - script.execute:
+          id: apply_profile_and_sync_active
+          phase_name: !lambda "return std::string(\"Sleep\");"
+          brightness_pct: !lambda "return id(sleep_brightness).state;"
+          color_name: !lambda "return std::string(id(sleep_color).current_option());"
+
+  - id: apply_prewakeup_profile
+    then:
+      - script.execute:
+          id: apply_profile_and_sync_active
+          phase_name: !lambda "return std::string(\"Pre-wake\");"
+          brightness_pct: !lambda "return id(prewakeup_brightness).state;"
+          color_name: !lambda "return std::string(id(prewakeup_color).current_option());"
+
+  - id: apply_wakeup_profile
+    then:
+      - script.execute:
+          id: apply_profile_and_sync_active
+          phase_name: !lambda "return std::string(\"Wake up\");"
+          brightness_pct: !lambda "return id(wakeup_brightness).state;"
+          color_name: !lambda "return std::string(id(wakeup_color).current_option());"
+
+  - id: check_and_run_alarm_phases
+    then:
+      - lambda: |-
+          if (!id(alarm_enabled_state))
+            return;
+
+          auto now = id(time_sntp).now();
+          if (!now.is_valid())
+            return;
+
+          const int trigger_window_minutes = 1;
+          const int trigger_key = now.year * 1000 + now.day_of_year;
+          const int now_total = now.hour * 60 + now.minute;
+          const int sleep_total = id(sleep_time).hour * 60 + id(sleep_time).minute;
+          const int wake_total = id(wakeup_time).hour * 60 + id(wakeup_time).minute;
+          const std::string pre_option = std::string(id(prewakeup_offset).current_option());
+          int pre_offset = 15;
+          if (pre_option == "5 minutes") pre_offset = 5;
+          else if (pre_option == "10 minutes") pre_offset = 10;
+          else if (pre_option == "20 minutes") pre_offset = 20;
+          else if (pre_option == "30 minutes") pre_offset = 30;
+          else if (pre_option == "45 minutes") pre_offset = 45;
+          else if (pre_option == "60 minutes") pre_offset = 60;
+          const int pre_total = (wake_total - pre_offset + (24 * 60)) % (24 * 60);
+
+          auto minutes_since = [&](int target_total) {
+            int delta = now_total - target_total;
+            if (delta < 0)
+              delta += 24 * 60;
+            return delta;
+          };
+
+          const int sleep_trigger_key = now.year * 100000 + now.day_of_year * 1440 + sleep_total;
+          const int pre_trigger_key = now.year * 100000 + now.day_of_year * 1440 + pre_total;
+          const int wake_trigger_key = now.year * 100000 + now.day_of_year * 1440 + wake_total;
+
+          const int sleep_delta = minutes_since(sleep_total);
+          const int pre_delta = minutes_since(pre_total);
+          const int wake_delta = minutes_since(wake_total);
+
+          // Prioritize wakeup over prewakeup over sleep when times overlap.
+          if (id(last_wakeup_key) != wake_trigger_key && wake_delta <= trigger_window_minutes) {
+            ESP_LOGI("alarm", "Scheduled wake-up phase triggered at %02d:%02d (target %02d:%02d, delta %d minute)", now.hour, now.minute, id(wakeup_time).hour, id(wakeup_time).minute, wake_delta);
+            id(last_wakeup_key) = wake_trigger_key;
+            id(last_phase_text) = "Wake up";
+            id(run_wakeup_phase_and_auto_off).execute();
+            return;
+          }
+
+          if (id(last_prewakeup_key) != pre_trigger_key && pre_delta <= trigger_window_minutes) {
+            ESP_LOGI("alarm", "Scheduled pre-wake phase triggered at %02d:%02d (target %02d:%02d, offset %s, delta %d minute)", now.hour, now.minute, pre_total / 60, pre_total % 60, pre_option.c_str(), pre_delta);
+            id(last_prewakeup_key) = pre_trigger_key;
+            id(last_phase_text) = "Pre-wake";
+            id(apply_prewakeup_profile).execute();
+            return;
+          }
+
+          if (id(last_sleep_key) != sleep_trigger_key && sleep_delta <= trigger_window_minutes) {
+            ESP_LOGI("alarm", "Scheduled sleep phase triggered at %02d:%02d (target %02d:%02d, delta %d minute)", now.hour, now.minute, id(sleep_time).hour, id(sleep_time).minute, sleep_delta);
+            id(last_sleep_key) = sleep_trigger_key;
+            id(last_phase_text) = "Sleep";
+            id(apply_sleep_profile).execute();
+          }
+
+  - id: apply_active_profile
+    then:
+      - lambda: |-
+          ESP_LOGI("alarm", "Applying active profile with color '%s' at %.0f%% brightness", id(active_color).current_option().c_str(), id(active_brightness).state);
+      - script.execute:
+          id: apply_profile
+          brightness_pct: !lambda "return id(active_brightness).state;"
+          color_name: !lambda "return std::string(id(active_color).current_option());"
+
+  - id: run_wakeup_phase_and_auto_off
+    then:
+      - lambda: |-
+          ESP_LOGI("alarm", "Running wake-up phase");
+      - script.execute: apply_wakeup_profile
+      - script.execute: auto_off
 
   - id: auto_off
     mode: restart
     then:
       - delay: 1h
+      - lambda: |-
+          ESP_LOGI("alarm", "Auto-off triggered, turning LED strip off");
       - light.turn_off: led_strip
 
 interval:
-  - interval: 60s
+  - interval: 10s
     then:
-      - lambda: |-
-          auto now = id(time_sntp).now();
-          if (!now.is_valid()) return;
-
-          int now_total = now.hour * 60 + now.minute;
-
-          int sleep_total = (int)id(sleep_hour).state * 60 + (int)id(sleep_minute).state;
-          int wakeup_total = (int)id(wakeup_hour).state * 60 + (int)id(wakeup_minute).state;
-          int wakeup_minus15 = wakeup_total - 15;
-
-          if (now_total == sleep_total) {
-            id(color_mode) = 1;
-            id(apply_color).execute();
-          }
-          else if (now_total == wakeup_minus15) {
-            id(color_mode) = 3;
-            id(apply_color).execute();
-          }
-          else if (now_total == wakeup_total) {
-            id(color_mode) = 2;
-            id(apply_color).execute();
-            id(auto_off).execute();
-          }
+      - script.execute: update_next_phase
+      - script.execute: check_and_run_alarm_phases
 
 binary_sensor:
   - platform: gpio
@@ -142,14 +557,20 @@ binary_sensor:
           - ON for at most 500ms
           - OFF for at least 350ms
         then:
+          - lambda: |-
+              ESP_LOGI("alarm", "Button single click detected");
           - if:
               condition:
                 light.is_on: led_strip
               then:
+                - lambda: |-
+                    ESP_LOGI("alarm", "Turning LED strip off from button press");
                 - light.turn_off: led_strip
                 - script.stop: auto_off
               else:
-                - script.execute: apply_color
+                - lambda: |-
+                    ESP_LOGI("alarm", "Turning LED strip on with active profile from button press");
+                - script.execute: apply_active_profile
       - timing:
           - ON for at most 500ms
           - OFF for at most 350ms
@@ -157,5 +578,6 @@ binary_sensor:
           - OFF for at least 350ms
         then:
           - lambda: |-
-              id(color_mode) = (id(color_mode) % 3) + 1;
-          - script.execute: apply_color
+              ESP_LOGI("alarm", "Button double click detected, cycling active color");
+          - select.next: active_color
+          - script.execute: apply_active_profile
