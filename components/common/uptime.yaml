@@ -1,4 +1,0 @@
----
-# https://esphome.io/components/sensor/uptime.html
-sensor:
-  - <<: !include ../sensors/uptime.yaml

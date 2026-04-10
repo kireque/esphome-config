@@ -1,0 +1,41 @@
+---
+# Device: Tuya smart valve (ESP8266 ESP-12e)
+# GPIOs: relay=GPIO13, button=GPIO12
+
+esp8266:
+  board: esp12e
+  framework:
+    version: recommended
+
+packages:
+  common: !include ../esphome-common/base.yaml
+  wifi: !include ../esphome-common/wifi.yaml
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: !secret web_password
+
+switch:
+  - platform: gpio
+    name: "relay"
+    pin: GPIO13
+    id: switch_relay
+    restore_mode: RESTORE_DEFAULT_OFF
+    icon: mdi:water-pump
+    on_turn_on:
+      - logger.log: "Valve Turned On!"
+    on_turn_off:
+      - logger.log: "Valve Turned Off!"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO12
+      inverted: true
+    name: "button"
+    on_press:
+      - switch.turn_on: switch_relay
+      - delay: 30min
+      - switch.turn_off: switch_relay

@@ -2,9 +2,8 @@
 substitutions:
   system_name: bedroom-job-rocket
   host_name: bedroom-job-rocket.home.econline.nl
-  device_description: "WS2812 job status LEDs - bedroom"
+  device_description: "WS2812 wake-up alarm light - bedroom"
   friendly_name: "Bedroom Job Rocket"
-  ap_ssid: "Job Rocket AP"
 
 packages:
-  device: !include devices/bedroom-job-rocket-atom-lite.yaml
+  device: !include m5stack-atom-lite/base.yaml

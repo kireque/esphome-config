@@ -1,0 +1,57 @@
+---
+# https://esphome.io/components/wifi.html
+# https://esphome.io/components/sensor/wifi_signal.html
+# https://esphome.io/components/text_sensor/wifi_info.html
+
+wifi:
+  id: component_wifi
+  ssid: !secret wifi_ssid
+  password: !secret wifi_pwd
+  use_address: "${host_name}"
+  reboot_timeout: 10min
+  ap:
+    ssid: "${friendly_name} AP"
+    password: !secret wifi_fallback_ssid_password
+
+sensor:
+  - platform: template
+    id: sensor_wifi_signal_percentage
+    name: "WiFi Signal Percentage"
+    icon: "mdi:wifi"
+    unit_of_measurement: "%"
+    update_interval: never
+    entity_category: diagnostic
+    lambda: |-
+      if (id(sensor_wifi_signal).state) {
+        if (id(sensor_wifi_signal).state <= -100) {
+          return 0;
+        } else if (id(sensor_wifi_signal).state >= -50) {
+          return 100;
+        } else {
+          return 2 * (id(sensor_wifi_signal).state + 100);
+        }
+      } else {
+        return NAN;
+      }
+  - platform: wifi_signal
+    id: sensor_wifi_signal
+    name: "WiFi Signal"
+    update_interval: 300s
+    entity_category: diagnostic
+    on_value:
+      - component.update: sensor_wifi_signal_percentage
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    ssid:
+      name: "Connected SSID"
+      entity_category: diagnostic
+    bssid:
+      name: "Connected BSSID"
+      entity_category: diagnostic
+    mac_address:
+      name: "Connected MAC"
+      entity_category: diagnostic
