@@ -136,8 +136,8 @@ binary_sensor:
             - OFF for at least 0.35s
         then:
           - light.toggle: laser
-      - on_press:
-          then:
+    on_press:
+      then:
             - if:
                 condition:
                   lambda: |-

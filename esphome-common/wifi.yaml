@@ -9,6 +9,7 @@ wifi:
   password: !secret wifi_pwd
   use_address: "${host_name}"
   reboot_timeout: 10min
+  min_auth_mode: WPA2
   ap:
     ssid: "${friendly_name} AP"
     password: !secret wifi_fallback_ssid_password

@@ -10,4 +10,3 @@ esp32:
 packages:
   common: !include ../esphome-common/base.yaml
   wifi: !include ../esphome-common/wifi.yaml
-  entities: !include entities.yaml

@@ -2,8 +2,9 @@
 substitutions:
   system_name: bedroom-job-rocket
   host_name: bedroom-job-rocket.home.econline.nl
-  device_description: "WS2812 wake-up alarm light - bedroom"
+  device_description: "Wake-up alarm light"
   friendly_name: "Bedroom Job Rocket"
 
 packages:
   device: !include m5stack-atom-lite/base.yaml
+  entities: !include bedroom-job-rocket/entities.yaml
