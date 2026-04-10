@@ -1,6 +1,0 @@
-{
-  extends: [
-    "github>kireque/renovate-config",
-    "github>kireque/renovate-config:automerge-github-actions",
-  ]
-}
