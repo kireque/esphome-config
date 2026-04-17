@@ -3,18 +3,17 @@
 # Note: core configuration (esphome, api, ota, logger) comes from remote_package below.
 # Only wifi is sourced from esphome-common.
 
+# Core and optional configurations
 packages:
-  wifi: !include ../esphome-common/wifi.yaml
   remote_package:
-    url: https://github.com/Blackymas/NSPanel_HA_Blueprint
-    ref: main
+    url: https://github.com/edwardtfn/NSPanel-Easy
+    ref: latest
     refresh: 300s
     files:
-      - nspanel_esphome.yaml
-      # Optional advanced and add-on configurations:
-      # - esphome/nspanel_esphome_advanced.yaml
-      # - esphome/nspanel_esphome_addon_ble_tracker.yaml
-      # - esphome/nspanel_esphome_addon_bluetooth_proxy.yaml
+      - nspanel_esphome.yaml # Basic package
+      # Optional advanced and add-on configurations
       # - esphome/nspanel_esphome_addon_climate_cool.yaml
       # - esphome/nspanel_esphome_addon_climate_heat.yaml
       # - esphome/nspanel_esphome_addon_climate_dual.yaml
+      # - esphome/nspanel_esphome_addon_cover.yaml
+      # - esphome/nspanel_esphome_addon_display_light.yaml  # Show the display as a light in Home Assistant
