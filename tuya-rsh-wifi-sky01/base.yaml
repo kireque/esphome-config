@@ -21,7 +21,7 @@ globals:
   - id: dim
     type: bool
     restore_value: no
-    initial_value: 'false'
+    initial_value: "false"
 
 light:
   - platform: rgb
@@ -55,7 +55,7 @@ light:
     id: laser
     output: laser_pwm
     restore_mode: ALWAYS_OFF
-    default_transition_length: 3s
+    default_transition_length: 0s
 
   - platform: monochromatic
     name: Button Led
@@ -65,13 +65,13 @@ light:
     output: btn_led_pwm
     restore_mode: ALWAYS_OFF
 
-fan:
-  platform: speed
-  name: Motor
-  icon: mdi:play-speed
-  id: motor
-  output: motor_pwm
-  restore_mode: ALWAYS_OFF
+  - platform: monochromatic
+    name: Motor
+    icon: mdi:rotate-360
+    id: motor
+    output: motor_pwm
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 1s
 
 output:
   - platform: esp8266_pwm
@@ -115,8 +115,8 @@ binary_sensor:
     id: button_1
     on_multi_click:
       - timing:
-            - ON for at most 1s
-            - OFF for at least 0.350s
+          - ON for at most 1s
+          - OFF for at least 0.350s
         then:
           - light.turn_on:
               id: rgb_light
@@ -130,39 +130,39 @@ binary_sensor:
           - light.turn_off:
               id: laser
       - timing:
-            - ON for at most 1s
-            - OFF for at most 0.35s
-            - ON for at most 1s
-            - OFF for at least 0.35s
+          - ON for at most 1s
+          - OFF for at most 0.35s
+          - ON for at most 1s
+          - OFF for at least 0.35s
         then:
           - light.toggle: laser
     on_press:
       then:
-            - if:
-                condition:
-                  lambda: |-
-                    return id(dim);
-                then:
-                  - delay: 0.1s
-                  - while:
-                      condition:
-                        binary_sensor.is_on: button_1
-                      then:
-                        - light.dim_relative:
-                            id: rgb_light
-                            relative_brightness: 5%
-                        - delay: 0.1s
-                  - lambda: |-
-                      id(dim) = (false);
-                else:
-                  - delay: 0.1s
-                  - while:
-                      condition:
-                        binary_sensor.is_on: button_1
-                      then:
-                        - light.dim_relative:
-                            id: rgb_light
-                            relative_brightness: 5%
-                        - delay: 0.1s
-                  - lambda: |-
-                      id(dim) = (true);
+        - if:
+            condition:
+              lambda: |-
+                return id(dim);
+            then:
+              - delay: 0.1s
+              - while:
+                  condition:
+                    binary_sensor.is_on: button_1
+                  then:
+                    - light.dim_relative:
+                        id: rgb_light
+                        relative_brightness: -5%
+                    - delay: 0.1s
+              - lambda: |-
+                  id(dim) = (false);
+            else:
+              - delay: 0.1s
+              - while:
+                  condition:
+                    binary_sensor.is_on: button_1
+                  then:
+                    - light.dim_relative:
+                        id: rgb_light
+                        relative_brightness: 5%
+                    - delay: 0.1s
+              - lambda: |-
+                  id(dim) = (true);
