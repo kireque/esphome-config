@@ -11,9 +11,11 @@ substitutions:
   boot_sound: false
   # Add-on configuration (if needed)
   ## Upload TFT
-  upload_tft_automatically: true
+  # upload_tft_automatically: true
   ## Climate add-on
   # heater_relay: "1"  # Possible values: "1" or "2"
+  # nextion_update_url: "http://10.1.2.21:8123/nspanel_blank.tft"
+  # BAUD_RATE: "115200"
 
 packages:
   device: !include sonoff-nspanel/base.yaml
