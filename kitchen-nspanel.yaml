@@ -6,7 +6,6 @@ substitutions:
   device_description: Smart touchscreen for home automation, integrates with Home Assistant.
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_pwd
-  ota_password: !secret ota_password
   language: en      # Language code - see docs/localization.md for all supported codes
   boot_sound: false
   # Add-on configuration (if needed)
@@ -31,3 +30,9 @@ web_server:
     type: digest
     username: admin
     password: !secret web_password
+
+# OTA uploads authenticated with the API encryption key
+ota:
+  - id: !extend ota_std
+    password: !remove
+    encryption: {}
