@@ -14,6 +14,7 @@ packages:
 web_server:
   port: 80
   auth:
+    type: digest
     username: admin
     password: !secret web_password
 
@@ -26,8 +27,19 @@ switch:
     icon: mdi:water-pump
     on_turn_on:
       - logger.log: "Valve Turned On!"
+      - script.execute: valve_auto_off
     on_turn_off:
       - logger.log: "Valve Turned Off!"
+      - script.stop: valve_auto_off
+
+# Safety cut-off: close the valve after max runtime, however it was opened
+script:
+  - id: valve_auto_off
+    mode: restart
+    then:
+      - delay: 30min
+      - logger.log: "Valve auto-off after max runtime"
+      - switch.turn_off: switch_relay
 
 binary_sensor:
   - platform: gpio
@@ -36,6 +48,4 @@ binary_sensor:
       inverted: true
     name: "button"
     on_press:
-      - switch.turn_on: switch_relay
-      - delay: 30min
-      - switch.turn_off: switch_relay
+      - switch.toggle: switch_relay

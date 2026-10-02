@@ -8,6 +8,10 @@ button:
     id: button_restart
     name: "Restart"
     entity_category: diagnostic
+  - platform: safe_mode
+    id: button_safe_mode
+    name: "Safe Mode Boot"
+    entity_category: diagnostic
 
 sensor:
   - platform: uptime

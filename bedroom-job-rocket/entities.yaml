@@ -1,10 +1,11 @@
 ---
 # WS2812 wake-up alarm light — entities
-# LED GPIO: 26 | Button: GPIO25 (external, pulled up, active low)
+# LED GPIO: 26 | Button: GPIO22 (external, pulled up, active low)
 
 web_server:
   port: 80
   auth:
+    type: digest
     username: admin
     password: !secret web_password
 
@@ -49,6 +50,9 @@ globals:
     restore_value: no
     initial_value: "15"
 
+# logger:
+#   level: VERBOSE
+
 esphome:
   on_boot:
     priority: -10
@@ -70,27 +74,37 @@ esphome:
       - script.execute: catch_up_after_boot
       - script.execute: update_next_phase
 
+i2c:
+  id: i2c_bus
+  sda: GPIO25
+  scl: GPIO21
+  scan: true
+
 time:
   - id: !extend time_sntp
     on_time_sync:
       - script.execute: catch_up_after_boot
+      - ds1307.write_time:
+
+  - platform: ds1307
+    id: rtc_time
+    address: 0x68
+    update_interval: never
 
 light:
-  - platform: neopixelbus
+  - platform: esp32_rmt_led_strip
     name: "LED Strip"
     icon: mdi:led-strip-variant
     id: led_strip
     pin: GPIO26
     num_leds: 8
-    variant: WS2812
-    type: GRB
+    chipset: WS2812
+    channel_colors: GRB
     default_transition_length: 500ms
     restore_mode: RESTORE_DEFAULT_OFF
     effects:
-      - random:
+      - addressable_random_twinkle:
           name: "Random Colors"
-          transition_length: 1s
-          update_interval: 1s
 
 number:
   - platform: template
@@ -256,6 +270,9 @@ text_sensor:
     name: "Alarm last phase"
     id: last_phase_sensor
     lambda: |-
+      if (id(last_phase_sensor).state == id(last_phase_text)) {
+        return {};
+      }
       return id(last_phase_text);
     update_interval: 10s
 
@@ -263,6 +280,9 @@ text_sensor:
     name: "Alarm next phase"
     id: next_phase_sensor
     lambda: |-
+      if (id(next_phase_sensor).state == id(next_phase_text)) {
+        return {};
+      }
       return id(next_phase_text);
     update_interval: 10s
 
@@ -407,7 +427,7 @@ script:
           else if (color_name == "Yellow") { call.set_rgb(1.0f, 1.0f,  0.0f);  }
           else if (color_name == "Blue")   { call.set_rgb(0.0f, 0.0f,  1.0f);  }
           else if (color_name == "Purple") { call.set_rgb(0.6f, 0.0f,  1.0f);  }
-          else                             { call.set_rgb(1.0f, 1.0f,  1.0f);  } // White
+          else                             { call.set_rgb(1.0f, 1.0f,  1.0f);  }
           call.perform();
 
   - id: apply_profile_and_sync_active
@@ -551,10 +571,21 @@ interval:
     then:
       - script.execute: update_next_phase
 
+  - interval: 60s
+    then:
+      - lambda: |-
+          uint8_t dummy = 0x00;
+          auto err = id(i2c_bus)->write(0x68, &dummy, 1, true);
+          id(ds3231_present).publish_state(err == i2c::ERROR_OK);
+
 binary_sensor:
+  - platform: template
+    name: "DS3231 aanwezig"
+    id: ds3231_present
+    device_class: connectivity
   - platform: gpio
     pin:
-      number: GPIO25
+      number: GPIO22
       inverted: true
       mode:
         input: true

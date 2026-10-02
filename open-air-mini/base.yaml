@@ -15,6 +15,7 @@ packages:
 web_server:
   port: 80
   auth:
+    type: digest
     username: admin
     password: !secret web_password
 
