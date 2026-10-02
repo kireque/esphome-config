@@ -9,7 +9,9 @@ ethernet:
   type: LAN8720
   mdc_pin: GPIO23
   mdio_pin: GPIO18
-  clk_mode: GPIO17_OUT
+  clk:
+    mode: CLK_OUT
+    pin: GPIO17
   phy_addr: 1
   power_pin: GPIO33
 
@@ -21,3 +23,19 @@ packages:
     file: ../esphome-common/base.yaml
   entities: !include
     file: entities.yaml
+
+sensor:
+  - platform: internal_temperature
+    id: sensor_cpu_temperature
+    name: "CPU Temperature"
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    mac_address:
+      name: "MAC Address"
+      entity_category: diagnostic
