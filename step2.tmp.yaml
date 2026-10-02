@@ -1,0 +1,38 @@
+---
+substitutions:
+  device_name: kitchen-nspanel
+  host_name: kitchen-nspanel-esp.home.econline.nl
+  friendly_name: Kitchen - NSPanel
+  device_description: Smart touchscreen for home automation, integrates with Home Assistant.
+  wifi_ssid: !secret wifi_ssid
+  wifi_password: !secret wifi_pwd
+  language: en      # Language code - see docs/localization.md for all supported codes
+  boot_sound: false
+  # Add-on configuration (if needed)
+  ## Upload TFT
+  # upload_tft_automatically: true
+  ## Climate add-on
+  # heater_relay: "1"  # Possible values: "1" or "2"
+  # nextion_update_url: "http://10.1.2.21:8123/nspanel_blank.tft"
+  # BAUD_RATE: "115200"
+
+packages:
+  device: !include sonoff-nspanel/base.yaml
+
+# Encrypt the API connection to Home Assistant
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# Own web server credentials instead of the Wi-Fi password
+web_server:
+  auth:
+    type: digest
+    username: admin
+    password: !secret web_password
+
+# OTA uploads authenticated with the API encryption key
+ota:
+  - id: !extend ota_std
+    password: !remove
+    encryption: {}
