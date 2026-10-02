@@ -9,4 +9,4 @@ packages:
   device: !include
     file: waterp1meterkit-v3/base.yaml
     vars:
-      gas_mbus_id: "2"
+      gas_mbus_id: "1"
